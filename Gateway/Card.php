@@ -250,7 +250,10 @@ class Card extends \WC_Payment_Gateway_CC
          */
         // Place order and save card scenario
         if (isset($_POST['wc-shift4_card-new-payment-method'])
-            && $_POST['wc-shift4_card-new-payment-method'] === 'true'
+            && (
+                $_POST['wc-shift4_card-new-payment-method'] === 'true'
+                || ($_POST['wc-shift4_card-new-payment-method'] === '1')
+            )
         ) {
             return self::PAYMENT_TYPE_SAVE_CARD;
         }
