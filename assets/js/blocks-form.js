@@ -4,6 +4,8 @@ import { useEffect, useRef } from '@wordpress/element';
 const Shift4PaymentForm = ( { paymentStatus } ) => {
     const formRef = useRef(null);
     const shift4FormSelector = '#shift4-payment-form';
+    
+    let shift4;
     let components;
 
     useEffect(() => {
@@ -32,7 +34,7 @@ const Shift4PaymentForm = ( { paymentStatus } ) => {
                 document.addEventListener('shift4JsLoaded', initialize);
             }
         } 
-        if (isProcessing) {
+        if (paymentStatus.isProcessing) {
             console.log(shift4)
             shift4.createToken(components)
                 .then(tokenCreatedCallback)
