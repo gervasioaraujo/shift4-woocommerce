@@ -1,9 +1,15 @@
 <?php
 
 use Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType;
+use Shift4\WooCommerce\Gateway\Card;
 
 class WC_Shift4_Block_Support extends AbstractPaymentMethodType
 {
+
+    public function __construct(private Card $cardGateway,)
+    {
+        $this->cardGateway = $cardGateway;
+    }
 
     /**
      * Payment method name defined by payment methods extending this class.
@@ -13,8 +19,8 @@ class WC_Shift4_Block_Support extends AbstractPaymentMethodType
     protected $name = 'shift4';
 
     /**
-	 * Initializes the payment method type.
-	 */
+     * Initializes the payment method type.
+     */
     public function initialize()
     {
         $this->settings = get_option('woocommerce_shift4_shared_settings', []);
@@ -35,13 +41,19 @@ class WC_Shift4_Block_Support extends AbstractPaymentMethodType
             true
         );
 
+        wp_enqueue_script(
+            'applepay-button-client',
+            'https://applepay.cdn-apple.com/jsapi/v1/apple-pay-sdk.js'
+        );
+
+        $data = $this->get_payment_method_data();
         $shift4Config = [
-            // 'threeDS' => $this->threeDSecureMode(),
-            // 'threeDSValidationMessage' => __('3DS validation failed.', 'your-textdomain'),
-            'publicKey' => __('pk_test_5BbRbNGakOkmKltTZX21eiER', 'shift4')
-            // 'componentNeedsTriggering' => is_checkout_pay_page() || is_add_payment_method_page(),
+            'blogName' => get_bloginfo('name'),
+            'threeDS' => $data['3ds_mode'],
+            'threeDSValidationMessage' => __('3DS validation failed.', 'your-textdomain'),
+            'publicKey' => $data['publicKey'],
         ];
-        
+
         wp_localize_script(
             'wc-shift4-blocks-integration',
             'shift4Config',
@@ -52,26 +64,29 @@ class WC_Shift4_Block_Support extends AbstractPaymentMethodType
     }
 
     /**
-	 * Returns if this payment method should be active. If false, the scripts will not be enqueued.
-	 *
-	 * @return boolean
-	 */
+     * Returns if this payment method should be active. If false, the scripts will not be enqueued.
+     *
+     * @return boolean
+     */
     public function is_active()
     {
         return true;
     }
 
     /**
-	 * Returns an array of key=>value pairs of data made available to the payment methods script.
-	 *
-	 * @return array
-	 */
+     * Returns an array of key=>value pairs of data made available to the payment methods script.
+     *
+     * @return array
+     */
     public function get_payment_method_data()
     {
+        $gateway = $this->cardGateway;
         return [
-            'title'       => 'Shift4 Block Gateway',
-            'description' => 'Shift4 Block Gateway',
-            'supports'    => ['products'],
+            'title'         => $gateway->method_title,
+            'description'   => $gateway->method_description,
+            'supports'      => $gateway->supports,
+            '3ds_mode'      => $gateway->settings['3ds_mode'],
+            'publicKey'     => $gateway->settings['shared_public_key'],
         ];
     }
 }

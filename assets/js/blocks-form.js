@@ -1,52 +1,60 @@
-import React from 'react';
-import { useEffect, useRef } from '@wordpress/element';
+import React from 'react'
+import { useEffect, useRef } from '@wordpress/element'
 
-const Shift4PaymentForm = ( { paymentStatus } ) => {
-    const formRef = useRef(null);
-    const shift4FormSelector = '#shift4-payment-form';
-    
-    let shift4;
-    let components;
+const Shift4PaymentForm = ({ eventRegistration, emitResponse, billing }) => {
+    const { cartTotal, currency } = billing
+    const formRef = useRef(null)
+    const paymentMethodDataRef = useRef(null)
+    const { onPaymentSetup } = eventRegistration
 
     useEffect(() => {
-        console.log('useEffect')
+        // initialize shift4 if needed
         if (!window.shift4Initialised) {
-            console.log('window.shift4Config: ' + window.shift4Config)
-            
-            shift4 = window.Shift4(window.shift4Config.publicKey);
-
-            try {
-                components = shift4.createComponentGroup().automount(shift4FormSelector);
-            } catch (error) {
-                console.error('Error mounting Shift4 components:', error);
-            }
 
             const initialize = () => {
                 if (typeof initShift4 === 'function') {
-                    initShift4();
-                    window.shift4Initialised = true;
+                    const blockOptions = {
+                        paymentMethodDataRef
+                    }
+                    initShift4(blockOptions)
+                    window.shift4Initialised = true
+                    window.shift4UpdatedCheckout()
                 }
-            };
+            }
 
             if (window.shift4JsLoaded) {
-                initialize();
+                initialize()
             } else {
-                document.addEventListener('shift4JsLoaded', initialize);
+                document.addEventListener('shift4JsLoaded', initialize)
             }
-        } 
-        if (paymentStatus.isProcessing) {
-            console.log(shift4)
-            shift4.createToken(components)
-                .then(tokenCreatedCallback)
-                .catch(errorCallback);
         }
-    }, []);
+        window.shift4UpdatedCheckout()
+        const unsubscribe = onPaymentSetup(async () => {
+            await window.shift4PaymentFormSubmit({
+                amount: cartTotal.value,
+                currency: currency.code
+            })
+            return {
+                type: emitResponse.responseTypes.SUCCESS,
+                meta: {
+                    paymentMethodData: {
+                        ...paymentMethodDataRef.current
+                    }
+                },
+            }
+        })
+        // Unsubscribes when this component is unmounted.
+        return () => {
+            unsubscribe()
+        }
+    }, [
+        emitResponse.responseTypes.ERROR,
+        emitResponse.responseTypes.SUCCESS,
+        onPaymentSetup,
+    ])
 
     return (
-        <div id="shift4-payment-form" ref={formRef}
-            data-amount={window.shift4Amount}
-            data-currency={window.shift4Currency}
-        >
+        <div id="shift4-payment-form" ref={formRef}>
             <div className="shift4-payment-field">
                 <label className="shift4-payment-number-label">
                     Card number
@@ -69,7 +77,7 @@ const Shift4PaymentForm = ( { paymentStatus } ) => {
             </div>
             <input type="hidden" name="shift4_card_token" id="shift4_card_token" />
         </div>
-    );
-};
+    )
+}
 
-export default Shift4PaymentForm;
+export default Shift4PaymentForm
